@@ -12,9 +12,12 @@ urlpatterns = [
     
     # API endpoint for saving DQ check
     path('save_dq_check/', views.save_dq_check, name='save_dq_check'),
+       
+    path('ui-tables.html', views.data_quality_view, name='data_quality_view'),
     
     # Matches any html file - MUST BE LAST
     re_path(r'^.*\.html', views.pages, name='pages'),
+ 
 ]
 
  

@@ -2,6 +2,7 @@
 """
 Copyright (c) 2019 - present AppSeed.us
 """
+from django.shortcuts import render
 
 from django import template
 from django.contrib.auth.decorators import login_required
@@ -136,3 +137,48 @@ def save_dq_check(request):
             'status': 'error',
             'message': 'An unexpected error occurred'
         }, status=500)
+
+
+
+@login_required(login_url="/login/")
+@require_http_methods(["GET"])
+def data_quality_view(request):
+    try:
+        print("=== Data Quality View Debug Info ===")
+        print(f"Request Method: {request.method}")
+        print(f"Request Path: {request.path}")
+        print(f"User: {request.user}")
+        
+        # Add explicit model reference and print table name
+        print(f"DEBUG: Table name in model: {DataQualityCheck._meta.db_table}")
+        
+        # Query with print statements
+        data_quality_checks = DataQualityCheck.objects.all().order_by('-updated_at')
+        print(f"DEBUG: Raw SQL query: {data_quality_checks.query}")
+        print(f"DEBUG: Count of records: {data_quality_checks.count()}")
+        
+        # Print first record if exists
+        if data_quality_checks.exists():
+            first_check = data_quality_checks.first()
+            print(f"DEBUG: First record: {first_check.__dict__}")
+        else:
+            print("DEBUG: No records found in database")
+        
+        context = {
+            'segment': 'tables',
+            'data_quality_checks': data_quality_checks
+        }
+        
+        # Print context before rendering
+        print(f"DEBUG: Context being passed to template: {context}")
+        print("=== End Debug Info ===")
+        
+        return render(request, 'home/ui-tables.html', context)
+    except Exception as e:
+        print(f"ERROR in data_quality_view: {str(e)}")
+        import traceback
+        print(f"DEBUG: Full traceback: {traceback.format_exc()}")
+        context = {'segment': 'error'}
+        html_template = loader.get_template('home/page-500.html')
+        return HttpResponse(html_template.render(context, request))
+
