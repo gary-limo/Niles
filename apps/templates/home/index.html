@@ -1,21 +1,333 @@
 {% extends "layouts/base.html" %}
 
-{% block title %} Dashboard {% endblock %} 
+{% block title %} Data Quality Check Configuration {% endblock %} 
 
-<!-- Specific Page CSS goes HERE  -->
-{% block stylesheets %}{% endblock stylesheets %}
+{% block stylesheets %}
+<style>
+    .form-section {
+        background-color: #ffffff;
+        padding: 30px;
+        border-radius: 12px;
+        box-shadow: 0 0 20px rgba(0,0,0,0.08);
+        margin-bottom: 25px;
+    }
+    .section-title {
+        color: #2c3e50;
+        margin-bottom: 25px;
+        padding-bottom: 15px;
+        border-bottom: 2px solid #eee;
+        font-weight: 600;
+    }
+    .sub-section {
+        background-color: #f8f9fa;
+        padding: 20px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+    }
+    .sub-section-title {
+        font-size: 1.1rem;
+        color: #34495e;
+        margin-bottom: 15px;
+        font-weight: 500;
+    }
+    .form-label {
+        font-weight: 500;
+        margin-bottom: 8px;
+    }
+    .required-field::after {
+        content: "*";
+        color: #e74c3c;
+        margin-left: 4px;
+    }
+    .help-text {
+        font-size: 0.85rem;
+        color: #7f8c8d;
+        margin-top: 4px;
+    }
+    .btn-primary {
+        padding: 10px 25px;
+        font-weight: 500;
+    }
+</style>
+{% endblock stylesheets %}
 
 {% block content %}
+<div class="content">
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col-md-12">
+                <div class="card">
+                    <div class="card-header card-header-primary">
+                        <h4 class="card-title">Data Quality Check Configuration</h4>
+                    </div>
+                    <div class="card-body">
+                        <form id="dqCheckForm" method="POST">
+                            {% csrf_token %}
+                            <!-- Step 1: Basic Information -->
+                            <div class="sub-section">
+                                <h5 class="sub-section-title">1. Database Location</h5>
+                                <div class="row g-3">
+                                    <div class="col-md-4">
+                                        <label class="form-label required-field" for="database_name">Database Name</label>
+                                        <input type="text" class="form-control" id="database_name" name="database_name" required 
+                                               placeholder="Enter database name">
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label required-field" for="schema_name">Schema Name</label>
+                                        <input type="text" class="form-control" id="schema_name" name="schema_name" required
+                                               placeholder="Enter schema name">
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label required-field" for="table_name">Table Name</label>
+                                        <input type="text" class="form-control" id="table_name" name="table_name" required
+                                               placeholder="Enter table name">
+                                    </div>
+                                </div>
+                            </div>
 
-     
+                            <!-- Step 2: Rule Configuration -->
+                            <div class="sub-section">
+                                <h5 class="sub-section-title">2. Rule Configuration</h5>
+                                <div class="row g-3 mb-3">
+                                    <div class="col-md-6">
+                                        <label class="form-label required-field" for="rule_type">Rule Type</label>
+                                        <select class="form-control" id="rule_type" name="rule_type" required>
+                                            <option value="">Select Rule Type</option>
+                                            <option value="LENGTH_CHECK">Length Check</option>
+                                            <option value="NULL_OR_EMPTY_CHECK">Null or Empty Check</option>
+                                            <option value="ALPHABET_CHECK">Alphabet Check</option>
+                                            <option value="PATTERN_MATCHING">Pattern Matching</option>
+                                            <option value="PK_CHECK">Primary Key Check</option>
+                                            <option value="TIMESTAMP_CONSISTENCY_CHECK">Timestamp Consistency Check</option>
+                                            <option value="HASHKEY_ACCURACY_CHECK">Hashkey Accuracy Check</option>
+                                            <option value="CUSTOM_SQL">Custom SQL</option>
+                                        </select>
+                                        <small class="help-text">Choose the type of data quality check to perform</small>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label required-field" for="column_name">Column Name</label>
+                                        <input type="text" class="form-control" id="column_name" name="column_name" required
+                                               placeholder="Enter column name">
+                                    </div>
+                                </div>
 
+                                <!-- Dynamic Rule Options -->
+                                <div id="ruleOptions">
+                                    <!-- Length Check Options -->
+                                    <div id="lengthCheckOptions" class="rule-specific-options" style="display: none;">
+                                        <div class="row g-3">
+                                            <div class="col-md-6">
+                                                <label class="form-label required-field" for="length">Expected Length</label>
+                                                <input type="number" class="form-control" id="length" name="length"
+                                                       placeholder="Enter expected length">
+                                                <small class="help-text">Specify the expected length of the field</small>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Pattern Match Options -->
+                                    <div id="patternOptions" class="rule-specific-options" style="display: none;">
+                                        <div class="row g-3">
+                                            <div class="col-md-6">
+                                                <label class="form-label" for="like_pattern">Pattern</label>
+                                                <input type="text" class="form-control" id="like_pattern" name="like_pattern"
+                                                       placeholder="Enter pattern (e.g., %@gmail.com)">
+                                                <small class="help-text">Use % as wildcard</small>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Custom SQL Options -->
+                                    <div id="customSqlOptions" class="rule-specific-options" style="display: none;">
+                                        <div class="row g-3">
+                                            <div class="col-12">
+                                                <label class="form-label required-field" for="custom_sql">Custom SQL Query</label>
+                                                <textarea class="form-control" id="custom_sql" name="custom_sql" rows="4"
+                                                          placeholder="Enter your custom SQL query"></textarea>
+                                                <small class="help-text">Query should return results that indicate data quality issues</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Step 3: Monitoring Configuration -->
+                            <div class="sub-section">
+                                <h5 class="sub-section-title">3. Monitoring Settings</h5>
+                                <div class="row g-3">
+                                    <div class="col-md-3">
+                                        <label class="form-label required-field" for="execution_frequency">Check Frequency</label>
+                                        <select class="form-control" id="execution_frequency" name="execution_frequency" required>
+                                            <option value="">Select Frequency</option>
+                                            <option value="hourly">Hourly</option>
+                                            <option value="daily">Daily</option>
+                                            <option value="weekly">Weekly</option>
+                                            <option value="monthly">Monthly</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <label class="form-label required-field" for="alert_recipient">Alert Email</label>
+                                        <input type="email" class="form-control" id="alert_recipient" name="alert_recipient" required
+                                               placeholder="Enter email address">
+                                    </div>
+                                    <div class="col-md-3">
+                                        <label class="form-label required-field" for="business_critical">Business Critical</label>
+                                        <select class="form-control" id="business_critical" name="business_critical" required>
+                                            <option value="">Select Option</option>
+                                            <option value="yes">Yes</option>
+                                            <option value="no">No</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <label class="form-label required-field" for="active_flag">Active Flag</label>
+                                        <select class="form-control" id="active_flag" name="active_flag" required>
+                                            <option value="">Select Option</option>
+                                            <option value="1">1</option>
+                                            <option value="0">0</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Submit Button -->
+                            <div class="row">
+                                <div class="col-12 text-end">
+                                    <button type="submit" class="btn btn-primary">Create Data Quality Check</button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock content %}
 
-<!-- Specific Page JS goes HERE  -->
 {% block javascripts %}
+<script>
+    // Wait for the DOM and all dashboard components to load
+    window.addEventListener('load', function() {
+        const form = document.getElementById('dqCheckForm');
+        const ruleTypeSelect = document.getElementById('rule_type');
+        
+        // Add event listener for rule type changes
+        ruleTypeSelect.addEventListener('change', function() {
+            // Hide all rule-specific options first
+            document.querySelectorAll('.rule-specific-options').forEach(el => {
+                el.style.display = 'none';
+            });
+            
+            // Show the relevant options based on selection
+            const selectedRule = this.value;
+            switch(selectedRule) {
+                case 'LENGTH_CHECK':
+                    document.getElementById('lengthCheckOptions').style.display = 'block';
+                    break;
+                case 'PATTERN_MATCHING':
+                    document.getElementById('patternOptions').style.display = 'block';
+                    break;
+                case 'CUSTOM_SQL':
+                    document.getElementById('customSqlOptions').style.display = 'block';
+                    break;
+            }
+        });
+        
+        // Form submission handler
+        if (form) {
+            form.addEventListener('submit', async function(e) {
+                e.preventDefault();
+                
+                try {
+                    // Create FormData object
+                    const formData = new FormData(form);
+                    const jsonData = {};
+                    
+                    // Convert FormData to JSON object and log each field
+                    console.group('Form Submission Values:');
+                    formData.forEach((value, key) => {
+                        if (value.trim() !== '') {
+                            jsonData[key] = value;
+                            console.log(`${key}: ${value}`);
+                        }
+                    });
+                    
+                    // Add and log rule-specific data based on selected rule type
+                    const ruleType = ruleTypeSelect.value;
+                    console.log('\nRule Type:', ruleType);
+                    
+                    if (ruleType === 'LENGTH_CHECK') {
+                        const lengthValue = document.getElementById('length').value;
+                        jsonData.rule_details = {
+                            length: lengthValue
+                        };
+                        console.log('Length Check Value:', lengthValue);
+                    } else if (ruleType === 'PATTERN_MATCHING') {
+                        const patternValue = document.getElementById('like_pattern').value;
+                        jsonData.rule_details = {
+                            pattern: patternValue
+                        };
+                        console.log('Pattern Value:', patternValue);
+                    } else if (ruleType === 'CUSTOM_SQL') {
+                        const sqlValue = document.getElementById('custom_sql').value;
+                        jsonData.rule_details = {
+                            sql: sqlValue
+                        };
+                        console.log('Custom SQL:', sqlValue);
+                    }
 
-  <script>
-    
-  </script>
+                    console.log('\nComplete JSON Data being sent:');
+                    console.log(jsonData);
+                    console.groupEnd();
 
+                    // Get CSRF token
+                    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+
+                    // Send the request
+                    const response = await fetch('/save_dq_check/', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': csrfToken
+                        },
+                        body: JSON.stringify(jsonData)
+                    });
+
+                    // Log the response details
+                    console.log('Response status:', response.status);
+                    console.log('Response headers:', response.headers);
+
+                    // Check if response is JSON
+                    const contentType = response.headers.get('content-type');
+                    if (!contentType || !contentType.includes('application/json')) {
+                        // If not JSON, get the text content for error details
+                        const textContent = await response.text();
+                        console.error('Received non-JSON response:', textContent);
+                        throw new Error('Server returned non-JSON response');
+                    }
+
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+
+                    const data = await response.json();
+                    console.log('Server response:', data);
+                    
+                    if (data.status === 'success') {
+                        alert('Data Quality Check saved successfully!');
+                        form.reset();
+                        document.querySelectorAll('.rule-specific-options').forEach(el => {
+                            el.style.display = 'none';
+                        });
+                    } else {
+                        alert('Error: ' + (data.message || 'Unknown error occurred'));
+                    }
+                } catch (error) {
+                    console.error('Error details:', error);
+                    alert('Error saving Data Quality Check: ' + error.message);
+                }
+            });
+        }
+    });
+</script>
 {% endblock javascripts %}
