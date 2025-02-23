@@ -100,6 +100,7 @@
                                             <option value="PK_CHECK">Primary Key Check</option>
                                             <option value="TIMESTAMP_CONSISTENCY_CHECK">Timestamp Consistency Check</option>
                                             <option value="HASHKEY_ACCURACY_CHECK">Hashkey Accuracy Check</option>
+                                            <option value="RANGE_CHECK">Range Check</option>
                                             <option value="CUSTOM_SQL">Custom SQL</option>
                                         </select>
                                         <small class="help-text">Choose the type of data quality check to perform</small>
@@ -113,9 +114,48 @@
 
                                 <!-- Dynamic Rule Options -->
                                 <div id="ruleOptions">
+                                    <!-- Add Threshold field that's always visible -->
+                                    <div class="row g-3 mb-3">
+                                        <div class="col-md-6">
+                                            <label class="form-label required-field" for="threshold">Threshold (%)</label>
+                                            <input type="number" class="form-control" id="threshold" name="threshold" required
+                                                   min="0" max="100" placeholder="Enter threshold percentage">
+                                            <small class="help-text">Maximum percentage of records that can fail this check</small>
+                                        </div>
+                                    </div>
+
+                                    <!-- Range Check Options -->
+                                    <div id="rangeCheckOptions" class="rule-specific-options" style="display: none;">
+                                        <div class="row g-3">
+                                            <div class="col-md-6">
+                                                <label class="form-label required-field" for="range_start">Start Value</label>
+                                                <input type="number" class="form-control" id="range_start" name="range_start"
+                                                       placeholder="Enter start value">
+                                            </div>
+                                            <div class="col-md-6">
+                                                <label class="form-label required-field" for="range_end">End Value</label>
+                                                <input type="number" class="form-control" id="range_end" name="range_end"
+                                                       placeholder="Enter end value">
+                                            </div>
+                                        </div>
+                                    </div>
+
                                     <!-- Length Check Options -->
                                     <div id="lengthCheckOptions" class="rule-specific-options" style="display: none;">
                                         <div class="row g-3">
+                                            <div class="col-md-6">
+                                                <label class="form-label required-field" for="length_operator">Operator</label>
+                                                <select class="form-control" id="length_operator" name="length_operator" required>
+                                                    <option value="">Select Operator</option>
+                                                    <option value="=">=</option>
+                                                    <option value=">">&gt;</option>
+                                                    <option value=">=">&gt;=</option>
+                                                    <option value="<">&lt;</option>
+                                                    <option value="<=">&lt;=</option>
+                                                    <option value="!=">!=</option>
+                                                </select>
+                                                <small class="help-text">Select the comparison operator</small>
+                                            </div>
                                             <div class="col-md-6">
                                                 <label class="form-label required-field" for="length">Expected Length</label>
                                                 <input type="number" class="form-control" id="length" name="length"
@@ -213,6 +253,18 @@
         
         // Add event listener for rule type changes
         ruleTypeSelect.addEventListener('change', function() {
+            // Handle column name visibility
+            const columnNameField = document.getElementById('column_name');
+            const columnNameContainer = columnNameField.closest('.col-md-6');
+            
+            if (this.value === 'CUSTOM_SQL') {
+                columnNameContainer.style.display = 'none';
+                columnNameField.removeAttribute('required');
+            } else {
+                columnNameContainer.style.display = 'block';
+                columnNameField.setAttribute('required', 'required');
+            }
+            
             // Hide all rule-specific options first
             document.querySelectorAll('.rule-specific-options').forEach(el => {
                 el.style.display = 'none';
@@ -229,6 +281,9 @@
                     break;
                 case 'CUSTOM_SQL':
                     document.getElementById('customSqlOptions').style.display = 'block';
+                    break;
+                case 'RANGE_CHECK':
+                    document.getElementById('rangeCheckOptions').style.display = 'block';
                     break;
             }
         });
@@ -258,10 +313,13 @@
                     
                     if (ruleType === 'LENGTH_CHECK') {
                         const lengthValue = document.getElementById('length').value;
+                        const lengthOperator = document.getElementById('length_operator').value;
                         jsonData.rule_details = {
-                            length: lengthValue
+                            length: lengthValue,
+                            operator: lengthOperator
                         };
                         console.log('Length Check Value:', lengthValue);
+                        console.log('Length Operator:', lengthOperator);
                     } else if (ruleType === 'PATTERN_MATCHING') {
                         const patternValue = document.getElementById('like_pattern').value;
                         jsonData.rule_details = {
@@ -274,6 +332,15 @@
                             sql: sqlValue
                         };
                         console.log('Custom SQL:', sqlValue);
+                    } else if (ruleType === 'RANGE_CHECK') {
+                        const rangeStart = document.getElementById('range_start').value;
+                        const rangeEnd = document.getElementById('range_end').value;
+                        jsonData.rule_details = {
+                            range_start: rangeStart,
+                            range_end: rangeEnd
+                        };
+                        console.log('Range Start:', rangeStart);
+                        console.log('Range End:', rangeEnd);
                     }
 
                     console.log('\nComplete JSON Data being sent:');

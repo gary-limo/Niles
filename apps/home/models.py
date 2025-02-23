@@ -39,7 +39,7 @@ class DataQualityCheck(models.Model):
     database_name = models.CharField(max_length=255)
     schema_name = models.CharField(max_length=255)
     table_name = models.CharField(max_length=255)
-    column_name = models.CharField(max_length=255)
+    column_name = models.CharField(max_length=255,null=True, blank=True)
     rule_type = models.CharField(max_length=50, choices=RULE_TYPE_CHOICES)
     execution_frequency = models.CharField(max_length=20, choices=FREQUENCY_CHOICES)
     alert_recipient = models.EmailField()
